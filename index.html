@@ -941,16 +941,23 @@ function TabPrets({data}){
     {membre:'BIDIAS IBRAHIM',type:'ordinaire',capital:30000,mois_emprunt:'Juin',statut:'encours',mois_retard:0,penalite:0,total_du:30000},
   ];
   // Normaliser données Supabase vers format interne
-  const pretsNorm=prets.map(p=>({
-    membre:p.membre_nom||p.membre||'',
-    type:p.type_credit||p.type||'',
-    capital:p.capital||0,
-    mois_emprunt:MOIS[p.mois_emprunt]||p.mois_emprunt||'',
-    statut:(p.statut||'').toLowerCase().replace('é','e').replace('soldé','solde'),
-    mois_retard:p.mois_retard||0,
-    penalite:p.penalite||0,
-    total_du:p.total_du||(p.capital-(p.montant_rembourse||0))||0,
-  }));
+  const moisActuel=8; // Août 2026
+  const pretsNorm=prets.map(p=>{
+    const statut=(p.statut||'').toLowerCase().trim();
+    const moisRetard=statut==='retard'?Math.max(0,(moisActuel-(p.mois_limite||0))):0;
+    const penalite=statut==='retard'?Math.round((p.capital-(p.montant_rembourse||0))*0.10*moisRetard):0;
+    const solde=Math.max(0,(p.capital||0)-(p.montant_rembourse||0));
+    return {
+      membre:p.membre_nom||p.membre||'',
+      type:p.type_credit||p.type||'',
+      capital:p.capital||0,
+      mois_emprunt:MOIS[p.mois_emprunt]||p.mois_emprunt||'',
+      statut:statut==='solde'||statut==='soldé'?'solde':statut,
+      mois_retard:moisRetard,
+      penalite:penalite,
+      total_du:solde+penalite,
+    };
+  });
   const liste=(pretsNorm.length>0&&pretsNorm.some(p=>p.capital>0))?pretsNorm:pretsStatic;
   const totalDu=liste.reduce((s,p)=>s+(p.total_du||0),0);
   return(
