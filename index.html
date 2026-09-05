@@ -1235,7 +1235,29 @@ function TabDetailAG({data}){
             {MOIS.slice(1).map((m,i)=><option key={i} value={i+1}>{m} 2026</option>)}
           </select>
           <button className={`btn btn-sm ${mode==='voir'?'btn-primary':'btn-secondary'}`} onClick={()=>setMode('voir')}>📋 Voir</button>
-          <button className={`btn btn-sm ${mode==='saisir'?'btn-primary':'btn-secondary'}`} onClick={()=>setMode('saisir')} style={{background:mode==='saisir'?'var(--gold)':'',color:mode==='saisir'?'#fff':''}}>{cotsMonth.length>0?'✏️ Modifier':'✏️ Saisir'}</button>
+          <button className={`btn btn-sm ${mode==='saisir'?'btn-primary':'btn-secondary'}`} onClick={()=>{
+            // Charger données existantes si disponibles
+            if(cotsMonth.length>0){
+              const loaded=MEMBRES_LISTE.map(nom=>{
+                const existing=cotsMonth.find(c=>c.membre_nom===nom);
+                return existing?{
+                  membre_nom:nom,
+                  epargne:existing.epargne||0,
+                  loto:existing.loto||0,
+                  tontine_versee:existing.tontine_versee||0,
+                  remboursement:existing.remboursement||0,
+                  interets:existing.interets||0,
+                  emprunt:existing.emprunt||0,
+                  aide:existing.aide||0,
+                  frais_collation:existing.frais_collation||0,
+                  inscription:existing.inscription||0,
+                  secours:existing.secours||0,
+                }:emptyRow(nom);
+              });
+              setRows(loaded);
+            }
+            setMode('saisir');
+          }} style={{background:mode==='saisir'?'var(--gold)':'',color:mode==='saisir'?'#fff':''}}>{cotsMonth.length>0?'✏️ Modifier':'✏️ Saisir'}</button>
         </div>
 
         {/* ── MODE SAISIE ── */}
