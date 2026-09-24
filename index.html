@@ -641,15 +641,16 @@ function TabDashboard({data,setActiveTab}){
     {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:227000,solde_mois:70500,beneficiaire_tontine:'BIABACK JC'},
     {mois:6,date_reunion:'26/06/2026',total_entrees:382000,total_sorties:242000,solde_mois:140000,beneficiaire_tontine:'BASSA OSEE'},
     {mois:7,date_reunion:'01/08/2026',total_entrees:377000,total_sorties:364000,solde_mois:13000,beneficiaire_tontine:'Mme BITCHEM'},
+    {mois:8,date_reunion:'05/09/2026',total_entrees:393000,total_sorties:309000,solde_mois:84000,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
   ];
   const liste=(reunions.length>0&&reunions.some(r=>r.total_entrees>0))?reunions:bilansStatic;
   const totalEntrees=liste.reduce((s,r)=>s+(r.total_entrees||0),0);
   const totalSorties=liste.reduce((s,r)=>s+(r.total_sorties||0),0);
   const solde=totalEntrees-totalSorties;
   const reunionsTenues=liste.filter(r=>r.date_reunion).length;
-  const membresActifs=membres.length>0?membres.filter(m=>m.statut==='actif').length||membres.length:19;
+  const membresActifs=membres.length>0?membres.filter(m=>m.statut==='actif').length||membres.length:20;
   const impayes=167600; // reports 2025 confirmés
-  const pretsEnRetard=prets.length>0?prets.filter(p=>p.statut==='retard').length:4;
+  const pretsEnRetard=prets.length>0?prets.filter(p=>p.statut==='retard').length:5;
 
   // ── Prochaine réunion (mois suivant le dernier tenu) ──
   const prochainMois=reunionsTenues+1;
@@ -737,18 +738,18 @@ function TabDashboard({data,setActiveTab}){
         <div className="alert-item">
           <div className="alert-dot red"/>
           <div className="alert-info">
-            <div className="alert-info-title">BASSA OSEE — retard 4 mois</div>
-            <div className="alert-info-sub">Crédit ordinaire + obligatoire</div>
+            <div className="alert-info-title">5 prêts en retard</div>
+            <div className="alert-info-sub">MBASSA MBASSA · MABENG RUBEN · BIDJANG ERIC · BIDIAS OREATOU · BIDIAS Ibrahim</div>
           </div>
-          <div className="alert-amount">111 870 F</div>
+          <div className="alert-amount">{fmt(pretsEnRetard)} retards</div>
         </div>
         <div className="alert-item">
-          <div className="alert-dot gold"/>
+          <div className="alert-dot green"/>
           <div className="alert-info">
             <div className="alert-info-title">Rang tontine n°7 — Juillet</div>
             <div className="alert-info-sub">Bénéficiaire : Mme BITCHEM</div>
           </div>
-          <div style={{fontSize:12,color:'var(--gold)',fontWeight:700}}>À encaisser</div>
+          <div style={{fontSize:12,color:'var(--green)',fontWeight:700}}>✅ Reçu</div>
         </div>
       </div>
 
@@ -764,7 +765,7 @@ function TabDashboard({data,setActiveTab}){
         </div>
         <div className="next-meeting-info">
           <div className="next-meeting-title">AG {prochainNom} 2026</div>
-          <div className="next-meeting-sub">Famille hôte : MBASSA MBASSA André Gildas</div>
+          <div className="next-meeting-sub">Famille hôte : MAFIÉ SAMIRA</div>
           <div className="next-meeting-tag">⏳ Date à confirmer</div>
         </div>
       </div>
@@ -788,13 +789,13 @@ function TabDashboard({data,setActiveTab}){
                   <div className="bar in" style={{height:hIn+'px'}}/>
                   <div className="bar out" style={{height:hOut+'px'}}/>
                 </div>
-                <div className="bar-month">{MOIS[r.mois]?.slice(0,3)}</div>
+                <div className="bar-month">{r.mois===6?'Jun':r.mois===7?'Jul':r.mois===8?'Aoû':MOIS[r.mois]?.slice(0,3)}</div>
               </div>
             );
           })}
         </div>
         <div style={{display:'flex',justifyContent:'space-between',marginTop:8,paddingTop:10,borderTop:'1px solid var(--border)'}}>
-          <div style={{fontSize:12,color:'var(--muted)'}}>Bilan S1 2026</div>
+          <div style={{fontSize:12,color:'var(--muted)'}}>Bilan Jan–Aoû 2026</div>
           <div style={{fontSize:14,fontWeight:800,color:'var(--green)'}}>{fmt(solde)} FCFA</div>
         </div>
       </div>
@@ -941,7 +942,7 @@ function TabPrets({data}){
     {membre:'BIDIAS IBRAHIM',type:'ordinaire',capital:30000,mois_emprunt:'Juin',statut:'encours',mois_retard:0,penalite:0,total_du:30000},
   ];
   // Normaliser données Supabase vers format interne
-  const moisActuel=8; // Août 2026
+  const moisActuel=9; // Septembre 2026
   const pretsNorm=prets.map(p=>{
     const statut=(p.statut||'').toLowerCase().trim();
     const moisRetard=statut==='retard'?Math.max(0,(moisActuel-(p.mois_limite||0))):0;
@@ -1005,6 +1006,7 @@ function TabReunions({data}){
     {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:227000,solde_mois:70500,beneficiaire_tontine:'BIABACK JC'},
     {mois:6,date_reunion:'26/06/2026',total_entrees:382000,total_sorties:242000,solde_mois:140000,beneficiaire_tontine:'BASSA OSEE'},
     {mois:7,date_reunion:'01/08/2026',total_entrees:377000,total_sorties:364000,solde_mois:13000,beneficiaire_tontine:'Mme BITCHEM'},
+    {mois:8,date_reunion:'05/09/2026',total_entrees:393000,total_sorties:309000,solde_mois:84000,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
   ];
   const liste=(reunions.length>0&&reunions.some(r=>r.total_entrees>0))?reunions:bilansStatic;
   const total_e=liste.reduce((s,r)=>s+(r.total_entrees||0),0);
