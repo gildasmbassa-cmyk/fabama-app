@@ -1021,7 +1021,7 @@ function TabReunions({data}){
 }
 
 // ─── DÉTAIL AG ────────────────────────────────────────────────────────────────
-function TabDetailAG({data}){
+function TabDetailAG({data,onSaved}){
   const {cotisations=[]}=data;
   const [moisSel,setMoisSel]=useState(new Date().getMonth()+1||8);
   const [mode,setMode]=useState('voir'); // 'voir' | 'saisir'
@@ -1052,23 +1052,31 @@ function TabDetailAG({data}){
     setSaving(true);setSaveMsg('');
     try{
       const annee=2026;
-      const payload=rows
-        .filter(r=>totalRow(r)>0||r.emprunt>0||r.aide>0)
-        .map(r=>({
-          ...r,
-          mois:moisSel,
-          annee,
-          total:totalRow(r),
-        }));
+      // Mise à jour ligne par ligne (jamais de suppression) : clé unique année + mois + membre.
+      // Le total est recalculé par la base ; les colonnes absentes du formulaire (inscription, secours, timbres…) sont conservées.
+      const idParNom=Object.fromEntries((data.membres||[]).map(m=>[m.nom,m.id]));
+      const dejaSaisis=new Set((data.cotisations||[]).filter(c=>c.mois===moisSel).map(c=>c.membre_nom));
+      const CHAMPS=['epargne','loto','tontine_versee','remboursement','interets','emprunt','aide','frais_collation'];
+      const aEnregistrer=rows.filter(r=>totalRow(r)>0||r.emprunt>0||r.aide>0||dejaSaisis.has(r.membre_nom));
+      const inconnus=aEnregistrer.filter(r=>!idParNom[r.membre_nom]).map(r=>r.membre_nom);
+      if(inconnus.length){setSaveMsg('❌ Membre introuvable en base : '+inconnus.join(', ')+'. Rien n\'a été enregistré.');setSaving(false);return;}
+      const payload=aEnregistrer.map(r=>{
+        const o={annee,mois:moisSel,membre_id:idParNom[r.membre_nom]};
+        CHAMPS.forEach(k=>{o[k]=Number(r[k])||0;});
+        return o;
+      });
       if(payload.length===0){setSaveMsg('⚠️ Aucune donnée à enregistrer.');setSaving(false);return;}
-
-      // Supprimer les anciennes lignes du mois puis réinsérer
-      await supaFetch(`/rest/v1/cotisations?mois=eq.${moisSel}&annee=eq.${annee}`,{method:'DELETE'});
-      await supaFetch('/rest/v1/cotisations',{method:'POST',body:JSON.stringify(payload)});
-      setSaveMsg('✅ Données enregistrées avec succès !');
+      await supaFetch('/rest/v1/cotisations?on_conflict=annee,mois,membre_id',{
+        method:'POST',
+        headers:{'Prefer':'resolution=merge-duplicates,return=representation'},
+        body:JSON.stringify(payload)
+      });
+      setSaveMsg(`✅ ${payload.length} ligne(s) enregistrée(s).`);
+      onSaved&&onSaved();
       setTimeout(()=>setSaveMsg(''),4000);
     }catch(e){
-      setSaveMsg('❌ Erreur : '+e.message);
+      const m=String(e.message||'');
+      setSaveMsg(/row-level security|permission/i.test(m)?'🔒 Enregistrement réservé à la Trésorière et au Secrétaire général.':'❌ Erreur : '+m+' (aucune donnée supprimée)');
     }
     setSaving(false);
   };
@@ -1759,7 +1767,7 @@ function App(){
           {activeTab==='tontine'&&<TabTontine data={data}/>}
           {activeTab==='prets'&&<TabPrets data={data}/>}
           {activeTab==='reunions'&&<TabReunions data={data}/>}
-          {activeTab==='detail'&&<TabDetailAG data={data}/>}
+          {activeTab==='detail'&&<TabDetailAG data={data} onSaved={()=>loadData(auth)}/>}
           {activeTab==='synthese'&&<TabSynthese data={data}/>}
           {activeTab==='reports'&&<TabReports data={data}/>}
           {activeTab==='reception'&&<TabReception data={data}/>}
