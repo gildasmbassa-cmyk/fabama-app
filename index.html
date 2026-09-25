@@ -550,6 +550,8 @@ Règles de réponse :
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const fmt=(n)=>n!=null?Number(n).toLocaleString('fr-FR'):'—';
 const MOIS=['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+// Famille hôte par mois d'AG 2026 (index = mois)
+const HOTES_2026=['','BIABAK','BIDIAS JB','Mme BITCHEM','LIBRE','MABENG RUBEN','MOUM À NDONG JAPHET','GAN À GAN','MBASSA MBASSA','BIDIAS IBRAHIM','MAFIÉ SAMIRA','KIKI','BIABAK'];
 
 // ─── COMPOSANTS UTILITAIRES ───────────────────────────────────────────────────
 function Loading(){return <div className="loading"><div className="spinner"/><p style={{marginTop:12}}>Chargement…</p></div>}
@@ -765,7 +767,7 @@ function TabDashboard({data,setActiveTab}){
         </div>
         <div className="next-meeting-info">
           <div className="next-meeting-title">AG {prochainNom} 2026</div>
-          <div className="next-meeting-sub">Famille hôte : MAFIÉ SAMIRA</div>
+          <div className="next-meeting-sub">Famille hôte : {HOTES_2026[prochainMois]||'À confirmer'}</div>
           <div className="next-meeting-tag">⏳ Date à confirmer</div>
         </div>
       </div>
@@ -1516,13 +1518,13 @@ function TabReception(){
     {mois:'Janvier',hote:'BIABAK',statut:'done'},{mois:'Février',hote:'BIDIAS JB',statut:'done'},
     {mois:'Mars',hote:'Mme BITCHEM',statut:'done'},{mois:'Avril',hote:'LIBRE',statut:'libre'},
     {mois:'Mai',hote:'MABENG RUBEN',statut:'done'},{mois:'Juin',hote:'MOUM À NDONG JAPHET',statut:'done'},
-    {mois:'Juillet',hote:'GAN À GAN',statut:'current'},{mois:'Août',hote:'MBASSA MBASSA',statut:'next'},
-    {mois:'Septembre',hote:'BIDIAS IBRAHIM',statut:''},{mois:'Octobre',hote:'MAFIÉ SAMIRA',statut:''},
+    {mois:'Juillet',hote:'GAN À GAN',statut:'done'},{mois:'Août',hote:'MBASSA MBASSA',statut:'done'},
+    {mois:'Septembre',hote:'BIDIAS IBRAHIM',statut:'next'},{mois:'Octobre',hote:'MAFIÉ SAMIRA',statut:''},
     {mois:'Novembre',hote:'KIKI',statut:''},{mois:'Décembre',hote:'BIABAK',statut:''},
   ];
   return(
     <div className="tab-content">
-      <Alert type="info">📅 Prochain hôte : <b>MBASSA MBASSA André Gildas Gabin</b> — Août 2026</Alert>
+      <Alert type="info">📅 Prochain hôte : <b>BIDIAS IBRAHIM</b> — Septembre 2026</Alert>
       <div className="reception-grid">
         {cal.map((c,i)=>(
           <div key={i} className={`reception-card ${c.statut==='done'?'done':c.statut==='current'||c.statut==='next'?'current':''}`}>
