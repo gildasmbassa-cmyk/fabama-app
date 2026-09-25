@@ -634,14 +634,14 @@ function TabDashboard({data,setActiveTab}){
 
   // ── Calculs réels ──
   const bilansStatic=[
-    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:75500,solde_mois:212000,beneficiaire_tontine:'MABENG RUBEN'},
-    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:50000,solde_mois:192000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:110000,solde_mois:164000,beneficiaire_tontine:'Mtre KIKI'},
-    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:50000,solde_mois:239000,beneficiaire_tontine:'BIDJANG ERIC'},
-    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:75000,solde_mois:222500,beneficiaire_tontine:'BIABACK JC'},
-    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:30000,solde_mois:348000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:150000,solde_mois:248000,beneficiaire_tontine:'Mme BITCHEM'},
-    {mois:8,date_reunion:'05/09/2026',total_entrees:381000,total_sorties:167300,solde_mois:213700,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
+    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:195500,solde_mois:92000,beneficiaire_tontine:'MABENG RUBEN'},
+    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:170000,solde_mois:72000,beneficiaire_tontine:'BASSA OSEE'},
+    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:230000,solde_mois:44000,beneficiaire_tontine:'Mtre KIKI'},
+    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:170000,solde_mois:119000,beneficiaire_tontine:'BIDJANG ERIC'},
+    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:195000,solde_mois:102500,beneficiaire_tontine:'BIABACK JC'},
+    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:150000,solde_mois:228000,beneficiaire_tontine:'BASSA OSEE'},
+    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:270000,solde_mois:128000,beneficiaire_tontine:'Mme BITCHEM'},
+    {mois:8,date_reunion:'05/09/2026',total_entrees:381000,total_sorties:287300,solde_mois:93700,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
   ];
   const liste=(reunions.length>0&&reunions.some(r=>r.total_entrees>0))?reunions:bilansStatic;
   const totalEntrees=liste.reduce((s,r)=>s+(r.total_entrees||0),0);
@@ -999,14 +999,14 @@ function TabPrets({data}){
 function TabReunions({data}){
   const {reunions=[]}=data;
   const bilansStatic=[
-    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:75500,solde_mois:212000,beneficiaire_tontine:'MABENG RUBEN'},
-    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:50000,solde_mois:192000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:110000,solde_mois:164000,beneficiaire_tontine:'Mtre KIKI'},
-    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:50000,solde_mois:239000,beneficiaire_tontine:'BIDJANG ERIC'},
-    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:75000,solde_mois:222500,beneficiaire_tontine:'BIABACK JC'},
-    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:30000,solde_mois:348000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:150000,solde_mois:248000,beneficiaire_tontine:'Mme BITCHEM'},
-    {mois:8,date_reunion:'05/09/2026',total_entrees:381000,total_sorties:167300,solde_mois:213700,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
+    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:195500,solde_mois:92000,beneficiaire_tontine:'MABENG RUBEN'},
+    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:170000,solde_mois:72000,beneficiaire_tontine:'BASSA OSEE'},
+    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:230000,solde_mois:44000,beneficiaire_tontine:'Mtre KIKI'},
+    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:170000,solde_mois:119000,beneficiaire_tontine:'BIDJANG ERIC'},
+    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:195000,solde_mois:102500,beneficiaire_tontine:'BIABACK JC'},
+    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:150000,solde_mois:228000,beneficiaire_tontine:'BASSA OSEE'},
+    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:270000,solde_mois:128000,beneficiaire_tontine:'Mme BITCHEM'},
+    {mois:8,date_reunion:'05/09/2026',total_entrees:381000,total_sorties:287300,solde_mois:93700,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
   ];
   const liste=(reunions.length>0&&reunions.some(r=>r.total_entrees>0))?reunions:bilansStatic;
   const total_e=liste.reduce((s,r)=>s+(r.total_entrees||0),0);
