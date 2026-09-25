@@ -552,6 +552,16 @@ const fmt=(n)=>n!=null?Number(n).toLocaleString('fr-FR'):'—';
 const MOIS=['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 // Famille hôte par mois d'AG 2026 (index = mois)
 const HOTES_2026=['','BIABAK','BIDIAS JB','Mme BITCHEM','LIBRE','MABENG RUBEN','MOUM À NDONG JAPHET','GAN À GAN','MBASSA MBASSA','BIDIAS IBRAHIM','MAFIÉ SAMIRA','KIKI','BIABAK'];
+// Une AG est « tenue » dès que sa date (enregistrée depuis le Communiqué) est passée.
+// Même règle côté base : fonction fabama_sync_ag() (trigger + tâche quotidienne).
+const AG_TENUES_STATIC=8; // repli hors ligne : AG janvier→août tenues
+const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const agTenue=(reunions,mois)=>{
+  if(!reunions||!reunions.length)return mois<=AG_TENUES_STATIC;
+  const r=reunions.find(x=>x.mois===mois);
+  return !!(r&&r.date_reunion&&String(r.date_reunion).slice(0,10)<=todayISO());
+};
+const prochaineAG=(reunions)=>{for(let m=1;m<=12;m++){if(!agTenue(reunions,m))return m;}return 13;};
 
 // ─── COMPOSANTS UTILITAIRES ───────────────────────────────────────────────────
 function Loading(){return <div className="loading"><div className="spinner"/><p style={{marginTop:12}}>Chargement…</p></div>}
@@ -636,26 +646,26 @@ function TabDashboard({data,setActiveTab}){
 
   // ── Calculs réels ──
   const bilansStatic=[
-    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:195500,solde_mois:92000,beneficiaire_tontine:'MABENG RUBEN'},
-    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:170000,solde_mois:72000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:230000,solde_mois:44000,beneficiaire_tontine:'Mtre KIKI'},
-    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:170000,solde_mois:119000,beneficiaire_tontine:'BIDJANG ERIC'},
-    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:195000,solde_mois:102500,beneficiaire_tontine:'BIABACK JC'},
-    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:150000,solde_mois:228000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:270000,solde_mois:128000,beneficiaire_tontine:'Mme BITCHEM'},
-    {mois:8,date_reunion:'05/09/2026',total_entrees:381000,total_sorties:287300,solde_mois:93700,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
+    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:225500,solde_mois:62000,beneficiaire_tontine:'MABENG RUBEN'},
+    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:194000,solde_mois:48000,beneficiaire_tontine:'BASSA OSEE'},
+    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:262000,solde_mois:12000,beneficiaire_tontine:'Mtre KIKI'},
+    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:206000,solde_mois:83000,beneficiaire_tontine:'BIDJANG ERIC'},
+    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:227000,solde_mois:70500,beneficiaire_tontine:'BIABACK JC'},
+    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:182000,solde_mois:196000,beneficiaire_tontine:'BASSA OSEE'},
+    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:306000,solde_mois:92000,beneficiaire_tontine:'Mme BITCHEM'},
+    {mois:8,date_reunion:'05/09/2026',total_entrees:381000,total_sorties:309000,solde_mois:72000,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
   ];
   const liste=(reunions.length>0&&reunions.some(r=>r.total_entrees>0))?reunions:bilansStatic;
   const totalEntrees=liste.reduce((s,r)=>s+(r.total_entrees||0),0);
   const totalSorties=liste.reduce((s,r)=>s+(r.total_sorties||0),0);
   const solde=totalEntrees-totalSorties;
-  const reunionsTenues=liste.filter(r=>r.date_reunion).length;
+  const reunionsTenues=Array.from({length:12},(_,i)=>i+1).filter(m=>agTenue(reunions,m)).length;
   const membresActifs=membres.length>0?membres.filter(m=>m.statut==='actif').length||membres.length:20;
   const impayes=167600; // reports 2025 confirmés
   const pretsEnRetard=prets.length>0?prets.filter(p=>p.statut==='retard').length:5;
 
   // ── Prochaine réunion (mois suivant le dernier tenu) ──
-  const prochainMois=reunionsTenues+1;
+  const prochainMois=prochaineAG(reunions);
   const prochainNom=MOIS[prochainMois]||'—';
 
   // ── Graphique données réelles ──
@@ -881,7 +891,7 @@ function TabMembres({data,role}){
 
 // ─── TONTINE ──────────────────────────────────────────────────────────────────
 function TabTontine({data}){
-  const {tontine=[]}=data;
+  const {tontine=[],reunions=[]}=data;
   const rangsStatic=[
     {rang:1,mois:'Janvier',beneficiaire:'MABENG RUBEN',statut:'Reçu'},
     {rang:2,mois:'Février',beneficiaire:'BASSA OSEE',statut:'Reçu'},
@@ -890,7 +900,7 @@ function TabTontine({data}){
     {rang:5,mois:'Mai',beneficiaire:'BIABACK JC',statut:'Reçu'},
     {rang:6,mois:'Juin',beneficiaire:'BASSA OSEE',statut:'Reçu'},
     {rang:7,mois:'Juillet',beneficiaire:'Mme BITCHEM',statut:'Reçu',date_paiement:'01/08/2026'},
-    {rang:8,mois:'Août',beneficiaire:'MBASSA MBASSA',statut:'À venir'},
+    {rang:8,mois:'Août',beneficiaire:'MBASSA MBASSA',statut:'Reçu',date_paiement:'05/09/2026'},
     {rang:9,mois:'Septembre',beneficiaire:'MAFIÉ SAMIRA',statut:'À venir'},
     {rang:10,mois:'Octobre',beneficiaire:'Mtre KIKI',statut:'À venir'},
     {rang:11,mois:'Novembre',beneficiaire:'FABAMA 1 Réserve',statut:'À venir'},
@@ -900,7 +910,8 @@ function TabTontine({data}){
     rang:t.rang,
     mois:MOIS[t.rang]||'',
     beneficiaire:t.beneficiaire_nom||t.beneficiaire||'',
-    statut:t.statut||'À venir',
+    // Rang N = AG du mois N : reçu dès que la date de cette AG est passée
+    statut:(reunions.length>0&&agTenue(reunions,t.rang))?'Reçu':(t.statut||'À venir'),
     date_paiement:t.date_paiement||null,
   }));
   const rangsDB=(rangsNorm.length>0)?rangsNorm:rangsStatic;
@@ -1001,14 +1012,14 @@ function TabPrets({data}){
 function TabReunions({data}){
   const {reunions=[]}=data;
   const bilansStatic=[
-    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:195500,solde_mois:92000,beneficiaire_tontine:'MABENG RUBEN'},
-    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:170000,solde_mois:72000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:230000,solde_mois:44000,beneficiaire_tontine:'Mtre KIKI'},
-    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:170000,solde_mois:119000,beneficiaire_tontine:'BIDJANG ERIC'},
-    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:195000,solde_mois:102500,beneficiaire_tontine:'BIABACK JC'},
-    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:150000,solde_mois:228000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:270000,solde_mois:128000,beneficiaire_tontine:'Mme BITCHEM'},
-    {mois:8,date_reunion:'05/09/2026',total_entrees:381000,total_sorties:287300,solde_mois:93700,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
+    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:225500,solde_mois:62000,beneficiaire_tontine:'MABENG RUBEN'},
+    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:194000,solde_mois:48000,beneficiaire_tontine:'BASSA OSEE'},
+    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:262000,solde_mois:12000,beneficiaire_tontine:'Mtre KIKI'},
+    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:206000,solde_mois:83000,beneficiaire_tontine:'BIDJANG ERIC'},
+    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:227000,solde_mois:70500,beneficiaire_tontine:'BIABACK JC'},
+    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:182000,solde_mois:196000,beneficiaire_tontine:'BASSA OSEE'},
+    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:306000,solde_mois:92000,beneficiaire_tontine:'Mme BITCHEM'},
+    {mois:8,date_reunion:'05/09/2026',total_entrees:381000,total_sorties:309000,solde_mois:72000,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
   ];
   const liste=(reunions.length>0&&reunions.some(r=>r.total_entrees>0))?reunions:bilansStatic;
   const total_e=liste.reduce((s,r)=>s+(r.total_entrees||0),0);
@@ -1513,18 +1524,20 @@ function TabReports(){
 }
 
 // ─── RÉCEPTION ────────────────────────────────────────────────────────────────
-function TabReception(){
-  const cal=[
-    {mois:'Janvier',hote:'BIABAK',statut:'done'},{mois:'Février',hote:'BIDIAS JB',statut:'done'},
-    {mois:'Mars',hote:'Mme BITCHEM',statut:'done'},{mois:'Avril',hote:'LIBRE',statut:'libre'},
-    {mois:'Mai',hote:'MABENG RUBEN',statut:'done'},{mois:'Juin',hote:'MOUM À NDONG JAPHET',statut:'done'},
-    {mois:'Juillet',hote:'GAN À GAN',statut:'done'},{mois:'Août',hote:'MBASSA MBASSA',statut:'done'},
-    {mois:'Septembre',hote:'BIDIAS IBRAHIM',statut:'next'},{mois:'Octobre',hote:'MAFIÉ SAMIRA',statut:''},
-    {mois:'Novembre',hote:'KIKI',statut:''},{mois:'Décembre',hote:'BIABAK',statut:''},
-  ];
+function TabReception({data={}}){
+  const {reunions=[]}=data;
+  // Statut dérivé de la date de l'AG (enregistrée via le Communiqué) : passée → Tenu
+  const next=prochaineAG(reunions);
+  const cal=MOIS.slice(1).map((mois,i)=>{
+    const m=i+1,hote=HOTES_2026[m];
+    const statut=hote==='LIBRE'?'libre':agTenue(reunions,m)?'done':m===next?'next':'';
+    return {mois,hote,statut};
+  });
   return(
     <div className="tab-content">
-      <Alert type="info">📅 Prochain hôte : <b>BIDIAS IBRAHIM</b> — Septembre 2026</Alert>
+      {next<=12
+        ?<Alert type="info">📅 Prochain hôte : <b>{HOTES_2026[next]}</b> — {MOIS[next]} 2026</Alert>
+        :<Alert type="info">✅ Toutes les AG 2026 sont tenues</Alert>}
       <div className="reception-grid">
         {cal.map((c,i)=>(
           <div key={i} className={`reception-card ${c.statut==='done'?'done':c.statut==='current'||c.statut==='next'?'current':''}`}>
@@ -1545,15 +1558,32 @@ function TabReception(){
 }
 
 // ─── COMMUNIQUÉ ───────────────────────────────────────────────────────────────
-function TabCommunique({data}){
-  const [mois,setMois]=useState(8);
-  const [hote,setHote]=useState('MBASSA MBASSA');
-  const [date,setDate]=useState('');
+function TabCommunique({data={},onSaved}){
+  const {reunions=[]}=data;
+  const moisInit=Math.min(prochaineAG(reunions),12);
+  const dateDB=(m)=>{const r=reunions.find(x=>x.mois===m);return r&&r.date_reunion?String(r.date_reunion).slice(0,10):'';};
+  const [mois,setMois]=useState(moisInit);
+  const [hote,setHote]=useState(HOTES_2026[moisInit]||'');
+  const [date,setDate]=useState(dateDB(moisInit));
   const [heure,setHeure]=useState('16h00');
-  const [lieu,setLieu]=useState('Dougoy, carrefour SHELL');
-  const [reperes,setReperes]=useState('50m après le carrefour SHELL, nouvelle route goudronnée');
+  const [lieu,setLieu]=useState('');
+  const [reperes,setReperes]=useState('');
   const [texte,setTexte]=useState('');
   const [copied,setCopied]=useState(false);
+  const [saveMsg,setSaveMsg]=useState('');
+
+  const changeMois=(m)=>{setMois(m);setHote(HOTES_2026[m]||'');setDate(dateDB(m));setSaveMsg('');};
+
+  // Enregistre la date de l'AG : une fois passée, tontine du rang + réception passent automatiquement à « Reçu / Tenu »
+  const saveDate=async()=>{
+    if(!date){setSaveMsg('');return;}
+    if(date===dateDB(mois)){setSaveMsg('📌 Date de l\'AG déjà enregistrée');return;}
+    try{
+      await supaFetch(`/rest/v1/reunions?annee=eq.2026&mois=eq.${mois}`,{method:'PATCH',body:JSON.stringify({date_reunion:date})});
+      setSaveMsg(`✅ Date de l'AG ${MOIS[mois]} enregistrée (${formatDate(date)}). Mise à jour automatique après cette date.`);
+      onSaved&&onSaved();
+    }catch(e){setSaveMsg('⚠️ Date non enregistrée : '+e.message);}
+  };
 
   const BENEFICIAIRES={
     8:'MBASSA MBASSA André Gildas Gabin',
@@ -1619,6 +1649,7 @@ MBASSA MBASSA André Gildas Gabin
 Secrétaire Général`;
 
     setTexte(t);setCopied(false);
+    saveDate();
   };
 
   const copy=()=>{
@@ -1632,7 +1663,7 @@ Secrétaire Général`;
         <div className="form-row">
           <div className="field">
             <label>Mois</label>
-            <select value={mois} onChange={e=>setMois(Number(e.target.value))}>
+            <select value={mois} onChange={e=>changeMois(Number(e.target.value))}>
               {MOIS.slice(1).map((m,i)=><option key={i} value={i+1}>{m} 2026</option>)}
             </select>
           </div>
@@ -1661,6 +1692,7 @@ Secrétaire Général`;
           <button className="btn btn-primary" onClick={generate}>📄 Générer</button>
           {texte&&<button className="btn" style={{background:copied?'var(--green)':'#1DA1F2',color:'#fff'}} onClick={copy}>{copied?'✅ Copié !':'📋 Copier pour WhatsApp'}</button>}
         </div>
+        {saveMsg&&<div style={{fontSize:13,marginBottom:12,color:saveMsg.startsWith('⚠️')?'var(--red)':'var(--green)'}}>{saveMsg}</div>}
         {texte&&(
           <div style={{background:'#e9fbe9',border:'1px solid #b2dfb2',borderRadius:10,padding:'16px',fontFamily:'monospace',fontSize:13,lineHeight:1.7,whiteSpace:'pre-wrap',wordBreak:'break-word',overflowX:'hidden'}}>
             {texte}
@@ -1904,8 +1936,8 @@ function App(){
           {activeTab==='detail'&&<TabDetailAG data={data}/>}
           {activeTab==='synthese'&&<TabSynthese data={data}/>}
           {activeTab==='reports'&&<TabReports/>}
-          {activeTab==='reception'&&<TabReception/>}
-          {activeTab==='communique'&&<TabCommunique data={data}/>}
+          {activeTab==='reception'&&<TabReception data={data}/>}
+          {activeTab==='communique'&&<TabCommunique data={data} onSaved={()=>loadData(auth)}/>}
           {activeTab==='assistant'&&<TabAssistant/>}
         </>
       )}
