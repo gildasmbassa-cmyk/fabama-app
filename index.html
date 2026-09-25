@@ -492,14 +492,11 @@ Règles de réponse :
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const fmt=(n)=>n!=null?Number(n).toLocaleString('fr-FR'):'—';
 const MOIS=['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-// Famille hôte par mois d'AG 2026 (index = mois)
-const HOTES_2026=['','BIABAK','BIDIAS JB','Mme BITCHEM','LIBRE','MABENG RUBEN','MOUM À NDONG JAPHET','GAN À GAN','MBASSA MBASSA','BIDIAS IBRAHIM','MAFIÉ SAMIRA','KIKI','BIABAK'];
 // Une AG est « tenue » dès que sa date (enregistrée depuis le Communiqué) est passée.
 // Même règle côté base : fonction fabama_sync_ag() (trigger + tâche quotidienne).
-const AG_TENUES_STATIC=8; // repli hors ligne : AG janvier→août tenues
 const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const agTenue=(reunions,mois)=>{
-  if(!reunions||!reunions.length)return mois<=AG_TENUES_STATIC;
+  if(!reunions||!reunions.length)return false;
   const r=reunions.find(x=>x.mois===mois);
   return !!(r&&r.date_reunion&&String(r.date_reunion).slice(0,10)<=todayISO());
 };
@@ -549,16 +546,32 @@ const contexteIA=(data={})=>{
   L.push('\nRANGS TONTINE :');
   tontine.forEach(t=>L.push(`Rang ${t.rang} ${MOIS[t.rang]} : ${t.beneficiaire_nom} — ${t.statut}${t.date_paiement?' ('+t.date_paiement+')':''}`));
   L.push('\nCALENDRIER RÉCEPTION :');
-  L.push(MOIS.slice(1).map((m,i)=>`${m} ${HOTES_2026[i+1]}${agTenue(reunions,i+1)?' ✅':''}`).join(' | '));
-  const nx=prochaineAG(reunions);if(nx<=12)L.push(`Prochaine AG : ${MOIS[nx]}, chez ${HOTES_2026[nx]}`);
+  L.push(MOIS.slice(1).map((m,i)=>`${m} ${hoteDe(data,i+1)}${agTenue(reunions,i+1)?' ✅':''}`).join(' | '));
+  const nx=prochaineAG(reunions);if(nx<=12)L.push(`Prochaine AG : ${MOIS[nx]}, chez ${hoteDe(data,nx)}`);
   L.push('\nPRÊTS (capital / remboursé / statut) :');
-  prets.forEach(p=>L.push(`${p.membre_nom} — ${p.type_credit} ${f(p.capital)} (${MOIS[p.mois_emprunt]||''}, limite ${MOIS[p.mois_limite]||''}) / remboursé ${f(p.montant_rembourse)} / ${p.statut}${p.notes?' — '+p.notes:''}`));
+  prets.forEach(p=>L.push(`${p.membre_nom} [${statutPret(p)}] — ${p.type_credit} ${f(p.capital)} (${MOIS[p.mois_emprunt]||''}, limite ${MOIS[p.mois_limite]||''}) / remboursé ${f(p.montant_rembourse)} / ${p.statut}${p.notes?' — '+p.notes:''}`));
   L.push('\nREPORTS IMPAYÉS :');
   reports.forEach(r=>L.push(`${r.membre_nom} (${r.annee_source}, ${r.type_report}) : reste ${f(r.reste_a_payer)} FCFA`));
   L.push('\nSYNTHÈSE MEMBRES (Total cotisé / Épargne / Tontine reçue / Emprunts / Présences) :');
   calcSynthese(data).forEach(m=>L.push(`${m.membre} : ${f(m.total_cotise)} / ${f(m.epargne)} / ${f(m.tontine)} / ${f(m.emprunts)} / ${m.reunions}`));
   return L.join('\n');
 };
+
+// ── Source unique : hôtes = table calendrier_reception, bénéficiaires = table tontine ──
+const hoteDe=(data,m)=>((data&&data.calendrier)||[]).find(x=>x.mois===m)?.famille_nom||'';
+const lieuDe=(data,m)=>((data&&data.calendrier)||[]).find(x=>x.mois===m)?.lieu||'';
+const beneficiaireDe=(data,m)=>((data&&data.tontine)||[]).find(x=>x.rang===m)?.beneficiaire_nom||'';
+const moisCourant=()=>{const d=new Date();return d.getFullYear()>2026?13:d.getMonth()+1;};
+const fmtDateFR=(iso)=>iso?String(iso).slice(0,10).split('-').reverse().join('/'):'';
+// Bilans affichés = calcul à partir des cotisations + tontine (même formule que l'assistant)
+const bilansAffichage=(data)=>calcBilans(data).map(b=>({mois:b.mois,date_reunion:fmtDateFR(b.date),total_entrees:b.entrees,total_sorties:b.sorties,solde_mois:b.solde,beneficiaire_tontine:b.beneficiaire}));
+// Statut d'un prêt déduit des chiffres : soldé si rien à rembourser, retard si la limite est dépassée
+const statutPret=(p)=>{
+  const reste=(p.capital||0)-(p.montant_rembourse||0),st=String(p.statut||'').toLowerCase();
+  if(st.startsWith('sold')||reste<=0)return 'solde';
+  return moisCourant()>(p.mois_limite||0)?'retard':'encours';
+};
+
 
 // ─── COMPOSANTS UTILITAIRES ───────────────────────────────────────────────────
 function Loading(){return <div className="loading"><div className="spinner"/><p style={{marginTop:12}}>Chargement…</p></div>}
@@ -642,29 +655,19 @@ function TabDashboard({data,setActiveTab}){
   const {reunions=[],membres=[],prets=[]}=data;
 
   // ── Calculs réels ──
-  const bilansStatic=[
-    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:225500,solde_mois:62000,beneficiaire_tontine:'MABENG RUBEN'},
-    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:194000,solde_mois:48000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:262000,solde_mois:12000,beneficiaire_tontine:'Mtre KIKI'},
-    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:206000,solde_mois:83000,beneficiaire_tontine:'BIDJANG ERIC'},
-    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:227000,solde_mois:70500,beneficiaire_tontine:'BIABACK JC'},
-    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:182000,solde_mois:196000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:306000,solde_mois:92000,beneficiaire_tontine:'Mme BITCHEM'},
-    {mois:8,date_reunion:'05/09/2026',total_entrees:393300,total_sorties:309000,solde_mois:84300,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
-  ];
-  const liste=(reunions.length>0&&reunions.some(r=>r.total_entrees>0))?reunions:bilansStatic;
+  const liste=bilansAffichage(data);
   const totalEntrees=liste.reduce((s,r)=>s+(r.total_entrees||0),0);
   const totalSorties=liste.reduce((s,r)=>s+(r.total_sorties||0),0);
   const solde=totalEntrees-totalSorties;
   const reunionsTenues=Array.from({length:12},(_,i)=>i+1).filter(m=>agTenue(reunions,m)).length;
-  const membresActifs=membres.length>0?membres.filter(m=>m.statut==='actif').length||membres.length:20;
+  const membresActifs=membres.filter(m=>m.statut==='actif').length||membres.length;
   const reports=data.reports||[];
   const impayes=reports.reduce((s,r)=>s+(r.reste_a_payer||0),0); // reports impayés (table reports_impayes)
   const impayesNoms=[...new Set(reports.filter(r=>(r.reste_a_payer||0)>0).map(r=>r.membre_nom))].join(' · ');
-  const pretsEnRetard=prets.length>0?prets.filter(p=>p.statut==='retard').length:5;
+  const pretsEnRetard=prets.filter(p=>statutPret(p)==='retard').length;
 
   // ── Prochaine réunion (mois suivant le dernier tenu) ──
-  const prochainMois=prochaineAG(reunions);
+  const prochainMois=reunions.length?prochaineAG(reunions):0;
   const prochainNom=MOIS[prochainMois]||'—';
 
   // ── Graphique données réelles ──
@@ -776,7 +779,7 @@ function TabDashboard({data,setActiveTab}){
         </div>
         <div className="next-meeting-info">
           <div className="next-meeting-title">AG {prochainNom} 2026</div>
-          <div className="next-meeting-sub">Famille hôte : {HOTES_2026[prochainMois]||'À confirmer'}</div>
+          <div className="next-meeting-sub">Famille hôte : {hoteDe(data,prochainMois)||'À confirmer'}</div>
           <div className="next-meeting-tag">⏳ Date à confirmer</div>
         </div>
       </div>
@@ -859,20 +862,6 @@ function TabMembres({data,role}){
 // ─── TONTINE ──────────────────────────────────────────────────────────────────
 function TabTontine({data}){
   const {tontine=[],reunions=[]}=data;
-  const rangsStatic=[
-    {rang:1,mois:'Janvier',beneficiaire:'MABENG RUBEN',statut:'Reçu'},
-    {rang:2,mois:'Février',beneficiaire:'BASSA OSEE',statut:'Reçu'},
-    {rang:3,mois:'Mars',beneficiaire:'Mtre KIKI',statut:'Reçu'},
-    {rang:4,mois:'Avril',beneficiaire:'BIDJANG ERIC',statut:'Reçu'},
-    {rang:5,mois:'Mai',beneficiaire:'BIABACK JC',statut:'Reçu'},
-    {rang:6,mois:'Juin',beneficiaire:'BASSA OSEE',statut:'Reçu'},
-    {rang:7,mois:'Juillet',beneficiaire:'Mme BITCHEM',statut:'Reçu',date_paiement:'01/08/2026'},
-    {rang:8,mois:'Août',beneficiaire:'MBASSA MBASSA',statut:'Reçu',date_paiement:'05/09/2026'},
-    {rang:9,mois:'Septembre',beneficiaire:'MAFIÉ SAMIRA',statut:'À venir'},
-    {rang:10,mois:'Octobre',beneficiaire:'Mtre KIKI',statut:'À venir'},
-    {rang:11,mois:'Novembre',beneficiaire:'FABAMA 1 Réserve',statut:'À venir'},
-    {rang:12,mois:'Décembre',beneficiaire:'FABAMA 2 Réserve',statut:'À venir'},
-  ];
   const rangsNorm=(tontine||[]).map(t=>({
     rang:t.rang,
     mois:MOIS[t.rang]||'',
@@ -881,7 +870,7 @@ function TabTontine({data}){
     statut:(reunions.length>0&&agTenue(reunions,t.rang))?'Reçu':(t.statut||'À venir'),
     date_paiement:t.date_paiement||null,
   }));
-  const rangsDB=(rangsNorm.length>0)?rangsNorm:rangsStatic;
+  const rangsDB=rangsNorm;
   return(
     <div className="tab-content">
       <Alert type="info">💡 Pot fixe : <b>120 000 FCFA/mois</b> · Mise : <b>10 000 FCFA/rang</b> · 12 rangs · BASSA OSEE et Mtre KIKI : 2 rangs chacun</Alert>
@@ -914,9 +903,9 @@ function TabPrets({data}){
   const {prets=[]}=data;
   const pretsStatic=[]; // données nominatives retirées du code public — repli : cache local du dernier chargement
   // Normaliser données Supabase vers format interne
-  const moisActuel=9; // Septembre 2026
+  const moisActuel=moisCourant();
   const pretsNorm=prets.map(p=>{
-    const statut=(p.statut||'').toLowerCase().trim();
+    const statut=statutPret(p);
     const moisRetard=statut==='retard'?Math.max(0,(moisActuel-(p.mois_limite||0))):0;
     const penalite=statut==='retard'?Math.round((p.capital-(p.montant_rembourse||0))*0.10*moisRetard):0;
     const solde=Math.max(0,(p.capital||0)-(p.montant_rembourse||0));
@@ -970,17 +959,7 @@ function TabPrets({data}){
 // ─── RÉUNIONS ─────────────────────────────────────────────────────────────────
 function TabReunions({data}){
   const {reunions=[]}=data;
-  const bilansStatic=[
-    {mois:1,date_reunion:'30/01/2026',total_entrees:287500,total_sorties:225500,solde_mois:62000,beneficiaire_tontine:'MABENG RUBEN'},
-    {mois:2,date_reunion:'28/02/2026',total_entrees:242000,total_sorties:194000,solde_mois:48000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:3,date_reunion:'28/03/2026',total_entrees:274000,total_sorties:262000,solde_mois:12000,beneficiaire_tontine:'Mtre KIKI'},
-    {mois:4,date_reunion:'02/05/2026',total_entrees:289000,total_sorties:206000,solde_mois:83000,beneficiaire_tontine:'BIDJANG ERIC'},
-    {mois:5,date_reunion:'30/05/2026',total_entrees:297500,total_sorties:227000,solde_mois:70500,beneficiaire_tontine:'BIABACK JC'},
-    {mois:6,date_reunion:'26/06/2026',total_entrees:378000,total_sorties:182000,solde_mois:196000,beneficiaire_tontine:'BASSA OSEE'},
-    {mois:7,date_reunion:'01/08/2026',total_entrees:398000,total_sorties:306000,solde_mois:92000,beneficiaire_tontine:'Mme BITCHEM'},
-    {mois:8,date_reunion:'05/09/2026',total_entrees:393300,total_sorties:309000,solde_mois:84300,beneficiaire_tontine:'MBASSA MBASSA André Gildas Gabin'},
-  ];
-  const liste=(reunions.length>0&&reunions.some(r=>r.total_entrees>0))?reunions:bilansStatic;
+  const liste=bilansAffichage(data);
   const total_e=liste.reduce((s,r)=>s+(r.total_entrees||0),0);
   const total_s=liste.reduce((s,r)=>s+(r.total_sorties||0),0);
   return(
@@ -1356,14 +1335,14 @@ function TabReception({data={}}){
   // Statut dérivé de la date de l'AG (enregistrée via le Communiqué) : passée → Tenu
   const next=prochaineAG(reunions);
   const cal=MOIS.slice(1).map((mois,i)=>{
-    const m=i+1,hote=HOTES_2026[m];
+    const m=i+1,hote=hoteDe(data,m)||'—';
     const statut=hote==='LIBRE'?'libre':agTenue(reunions,m)?'done':m===next?'next':'';
     return {mois,hote,statut};
   });
   return(
     <div className="tab-content">
       {next<=12
-        ?<Alert type="info">📅 Prochain hôte : <b>{HOTES_2026[next]}</b> — {MOIS[next]} 2026</Alert>
+        ?<Alert type="info">📅 Prochain hôte : <b>{hoteDe(data,next)||'À confirmer'}</b> — {MOIS[next]} 2026</Alert>
         :<Alert type="info">✅ Toutes les AG 2026 sont tenues</Alert>}
       <div className="reception-grid">
         {cal.map((c,i)=>(
@@ -1390,16 +1369,16 @@ function TabCommunique({data={},onSaved}){
   const moisInit=Math.min(prochaineAG(reunions),12);
   const dateDB=(m)=>{const r=reunions.find(x=>x.mois===m);return r&&r.date_reunion?String(r.date_reunion).slice(0,10):'';};
   const [mois,setMois]=useState(moisInit);
-  const [hote,setHote]=useState(HOTES_2026[moisInit]||'');
+  const [hote,setHote]=useState(hoteDe(data,moisInit));
   const [date,setDate]=useState(dateDB(moisInit));
   const [heure,setHeure]=useState('16h00');
-  const [lieu,setLieu]=useState('');
+  const [lieu,setLieu]=useState(lieuDe(data,moisInit));
   const [reperes,setReperes]=useState('');
   const [texte,setTexte]=useState('');
   const [copied,setCopied]=useState(false);
   const [saveMsg,setSaveMsg]=useState('');
 
-  const changeMois=(m)=>{setMois(m);setHote(HOTES_2026[m]||'');setDate(dateDB(m));setSaveMsg('');};
+  const changeMois=(m)=>{setMois(m);setHote(hoteDe(data,m));setLieu(lieuDe(data,m));setDate(dateDB(m));setSaveMsg('');};
 
   // Enregistre la date de l'AG : une fois passée, tontine du rang + réception passent automatiquement à « Reçu / Tenu »
   const saveDate=async()=>{
@@ -1407,26 +1386,12 @@ function TabCommunique({data={},onSaved}){
     if(date===dateDB(mois)){setSaveMsg('📌 Date de l\'AG déjà enregistrée');return;}
     try{
       await supaFetch(`/rest/v1/reunions?annee=eq.2026&mois=eq.${mois}`,{method:'PATCH',body:JSON.stringify({date_reunion:date})});
+      if(lieu&&lieu!==lieuDe(data,mois)){await supaFetch(`/rest/v1/calendrier_reception?annee=eq.2026&mois=eq.${mois}`,{method:'PATCH',body:JSON.stringify({lieu})}).catch(()=>{});}
       setSaveMsg(`✅ Date de l'AG ${MOIS[mois]} enregistrée (${formatDate(date)}). Mise à jour automatique après cette date.`);
       onSaved&&onSaved();
     }catch(e){setSaveMsg('⚠️ Date non enregistrée : '+e.message);}
   };
 
-  const BENEFICIAIRES={
-    8:'MBASSA MBASSA André Gildas Gabin',
-    9:'MAFIÉ SAMIRA',
-    10:'Mtre KIKI',
-    11:'FABAMA 1 (Réserve association)',
-    12:'FABAMA 2 (Réserve association)',
-  };
-
-  const PROCHAINS_HOTES={
-    8:'BIDIAS IBRAHIM (Septembre)',
-    9:'MAFIÉ SAMIRA (Octobre)',
-    10:'KIKI (Novembre)',
-    11:'BIABAK (Décembre)',
-    12:'BIABAK (Janvier 2027)',
-  };
 
   const formatDate=(d)=>{
     if(!d)return '[Date à confirmer]';
@@ -1436,8 +1401,7 @@ function TabCommunique({data={},onSaved}){
 
   const generate=()=>{
     const m=MOIS[mois];
-    const beneficiaire=BENEFICIAIRES[mois]||'À définir';
-    const prochainHote=PROCHAINS_HOTES[mois]||'À confirmer';
+    const prochainHote=mois<12&&hoteDe(data,mois+1)?`${hoteDe(data,mois+1)} (${MOIS[mois+1]})`:'À confirmer';
     const dateStr=formatDate(date);
     const num=`N°${String(mois).padStart(2,'0')}/2026`;
 
@@ -1547,7 +1511,7 @@ function TabAssistant({data={}}){
     {label:'🏦 Rangs tontine',q:'Donne-moi tous les rangs de tontine 2026'},
     {label:'📊 Bilan S1',q:'Quel est le bilan financier du premier semestre 2026 ?'},
     {label:'👤 Mtre KIKI',q:'Fiche complète de Mtre KIKI'},
-    {label:'📢 Communiqué',q:`Rédige le communiqué officiel de la prochaine AG (${MOIS[Math.min(prochaineAG(data.reunions),12)]} 2026, chez ${HOTES_2026[Math.min(prochaineAG(data.reunions),12)]})`},
+    {label:'📢 Communiqué',q:`Rédige le communiqué officiel de la prochaine AG (${MOIS[Math.min(prochaineAG(data.reunions),12)]} 2026, chez ${hoteDe(data,Math.min(prochaineAG(data.reunions),12))})`},
     {label:'📋 Absents juin',q:'Quels membres n\'ont pas cotisé en juin 2026 ?'},
   ];
 
@@ -1650,7 +1614,7 @@ function App(){
   const [auth,setAuth]=useState(null);
   const [role,setRole]=useState(null);
   const [activeTab,setActiveTab]=useState('dashboard');
-  const [data,setData]=useState({membres:[],reunions:[],tontine:[],prets:[],cotisations:[],reports:[],synthese:[]});
+  const [data,setData]=useState({membres:[],reunions:[],tontine:[],prets:[],cotisations:[],reports:[],calendrier:[],synthese:[]});
   const [loading,setLoading]=useState(true);
   const [offline,setOffline]=useState(!navigator.onLine);
 
@@ -1670,22 +1634,23 @@ function App(){
   const loadData=async(user)=>{
     setLoading(true);
     try{
-      const [m,r,t,p,cots,rep]=await Promise.all([
+      const [m,r,t,p,cots,rep,cal]=await Promise.all([
         supaFetch('/rest/v1/membres?select=*&order=nom.asc').catch(()=>null),
         supaFetch('/rest/v1/reunions?select=*&annee=eq.2026&order=mois.asc').catch(()=>null),
         supaFetch('/rest/v1/tontine?select=*&annee=eq.2026&order=rang.asc').catch(()=>null),
         supaFetch('/rest/v1/prets?select=*&annee=eq.2026').catch(()=>null),
         supaFetch('/rest/v1/cotisations?select=mois,epargne,loto,tontine_versee,remboursement,interets,emprunt,aide,frais_collation,total,membres(nom)&annee=eq.2026&order=mois.asc').catch(()=>null),
         supaFetch('/rest/v1/reports_impayes?select=*').catch(()=>null),
+        supaFetch('/rest/v1/calendrier_reception?select=*&annee=eq.2026&order=mois.asc').catch(()=>null),
       ]);
       // Normaliser cotisations : ajouter membre_nom depuis le join
       const cotsNorm=(cots||[]).map(c=>({...c,membre_nom:c.membres?.nom||''}));
       // get role
       const bureau=await supaFetch(`/rest/v1/bureau?select=role&id=eq.${_userId}`).catch(()=>[]);
       setRole(bureau?.[0]?.role||'membre');
-      const fresh={membres:m||[],reunions:r||[],tontine:t||[],prets:p||[],cotisations:cotsNorm,reports:rep||[],synthese:[]};
+      const fresh={membres:m||[],reunions:r||[],tontine:t||[],prets:p||[],cotisations:cotsNorm,reports:rep||[],calendrier:cal||[],synthese:[]};
       // Repli hors ligne : dernier chargement réussi, gardé sur l'appareil du membre connecté (effacé à la déconnexion)
-      const ok=[m,r,t,p,cots].every(x=>Array.isArray(x));
+      const ok=[m,r,t,p,cots,cal].every(x=>Array.isArray(x));
       if(ok){try{localStorage.setItem(CACHE_KEY,JSON.stringify(fresh))}catch(e){}setData(fresh);}
       else{let c=null;try{c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null')}catch(e){}setData(c||fresh);}
     }catch(e){console.error(e)}
