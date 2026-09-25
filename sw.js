@@ -1,5 +1,6 @@
-const CACHE='fabama-v1';
-const ASSETS=['/','/index.html','/manifest.json','/icon-192.png','/icon-512.png'];
+const CACHE='fabama-v2';
+const ASSETS=['/','/index.html','/app.js','/manifest.json','/icon-192.png','/icon-512.png','/assets/logo.webp','/assets/fond.webp','/assets/favicon.png',
+  'https://unpkg.com/react@18.3.1/umd/react.production.min.js','https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'];
 
 self.addEventListener('install',e=>{
   self.skipWaiting();
