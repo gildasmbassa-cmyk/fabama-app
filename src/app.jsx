@@ -1138,9 +1138,10 @@ function TabAssistant({data={}}){
         body:JSON.stringify({system:aiSystem(data),messages:newMsgs})
       });
       const d=await r.json().catch(()=>({}));
-      const reply=r.status===401?'🔒 Session expirée : reconnecte-toi.'
-        :r.status===403?'🔒 Assistant réservé au bureau FABAMA.'
-        :(d.content?.[0]?.text||('Erreur : '+(d.error?.message||d.error||'réponse vide.')));
+      const reply=d.content?.[0]?.text
+        ||(d.code==='session'||(r.status===401&&!d.code)?'🔒 Session expirée : déconnecte-toi puis reconnecte-toi.'
+        :d.code==='bureau'?'🔒 Assistant réservé au bureau FABAMA.'
+        :'⚠️ '+(typeof d.error==='string'?d.error:(d.error?.message||'Réponse vide du service IA.')));
       setMessages([...newMsgs,{role:'assistant',content:reply}]);
     }catch(e){
       setMessages([...newMsgs,{role:'assistant',content:'🚨 Erreur de connexion. Vérifie ta connexion internet.'}]);
