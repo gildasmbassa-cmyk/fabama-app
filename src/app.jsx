@@ -232,8 +232,11 @@ const MOIS_COURT=['','Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Se
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login({onLogin}){
-  const ID_MAP={'SG':'sg.fabama@gmail.com','PRESIDENT':'president.fabama@gmail.com','TRESORIERE':'tresoriere.fabama@gmail.com'};
-  const [login,setLogin]=useState('SG');
+  // Identifiants du bureau : « SG FABAMA », « PRESIDENT FABAMA », « TRESORIERE FABAMA » (les formes courtes restent acceptées)
+  const ID_MAP={'SG FABAMA':'sg.fabama@gmail.com','PRESIDENT FABAMA':'president.fabama@gmail.com','TRESORIERE FABAMA':'tresoriere.fabama@gmail.com',
+    'SG':'sg.fabama@gmail.com','PRESIDENT':'president.fabama@gmail.com','TRESORIERE':'tresoriere.fabama@gmail.com'};
+  const normId=(v)=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9@._-]+/g,' ').trim();
+  const [login,setLogin]=useState('SG FABAMA');
   const [pass,setPass]=useState('');
   const [showPass,setShowPass]=useState(false);
   const [remember,setRemember]=useState(false);
@@ -241,7 +244,7 @@ function Login({onLogin}){
   const [loading,setLoading]=useState(false);
   const submit=async()=>{
     setLoading(true);setErr('');
-    const email=ID_MAP[login.toUpperCase().trim()]||login;
+    const email=ID_MAP[normId(login)]||login.trim();
     try{
       const {error}=await supa.auth.signInWithPassword({email,password:pass});
       if(error)throw error;
@@ -268,7 +271,7 @@ function Login({onLogin}){
           <label>Identifiant</label>
           <div className="input-wrap">
             <span className="input-icon"><Icon n="users" size="sm"/></span>
-            <input type="text" value={login} onChange={e=>setLogin(e.target.value)} placeholder="SG / PRESIDENT / TRESORIERE" onKeyDown={e=>e.key==='Enter'&&submit()}/>
+            <input type="text" value={login} onChange={e=>setLogin(e.target.value)} placeholder="SG FABAMA" autoCapitalize="characters" autoComplete="username" onKeyDown={e=>e.key==='Enter'&&submit()}/>
           </div>
         </div>
         <div className="form-group">
