@@ -1039,8 +1039,8 @@ Secrétaire Général`;
           <div className="wa">
             <div className="wa-bubble">{texte}</div>
             <div className="wa-actions">
-              <button className="btn btn-primary" style={{flex:1}} onClick={copy}><Icon n={copied?'check':'copy'} size="sm"/>{copied?'Copié !':'Copier le texte'}</button>
-              <a className="btn btn-secondary" href={`https://wa.me/?text=${encodeURIComponent(texte)}`} target="_blank" rel="noopener"><Icon n="whatsapp" size="sm"/>WhatsApp</a>
+              <a className="btn btn-wa" style={{flex:1}} href={`https://wa.me/?text=${encodeURIComponent(texte)}`} target="_blank" rel="noopener"><Icon n="whatsapp" size="sm"/>Partager sur WhatsApp</a>
+              <button className="btn btn-secondary" onClick={copy} aria-label="Copier le texte" title="Copier le texte"><Icon n={copied?'check':'copy'} size="sm"/>{copied?'Copié':'Copier'}</button>
             </div>
           </div>
         </>
