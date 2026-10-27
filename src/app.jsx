@@ -127,8 +127,8 @@ const calcBilans=(data={})=>{
     const cs=cotisations.filter(c=>c.mois===m);if(!cs.length)continue;
     const sum=k=>cs.reduce((s,c)=>s+(c[k]||0),0);
     const t=tontine.find(x=>x.rang===m&&x.statut==='Reçu');
-    const e=sum('total'),so=sum('emprunt')+sum('aide')+sum('frais_collation')+(t?(t.pot||120000):0);
     const r=reunions.find(x=>x.mois===m);
+    const e=sum('total'),so=sum('emprunt')+sum('aide')+sum('frais_collation')+(t?(t.pot||120000):0)+(r?.depenses_diverses||0);
     out.push({mois:m,date:r?.date_reunion||'',entrees:e,sorties:so,solde:e-so,beneficiaire:t?.beneficiaire_nom||''});
   }
   return out;
